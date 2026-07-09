@@ -68,4 +68,18 @@ class ScanSchedulerTest {
         // Budget is exhausted, but unthrottled pacing only waits out the 4 s interval.
         assertEquals(3_000L, scheduler.nextScanDelayMs(nowMs = 4_000, throttled = false))
     }
+
+    @Test
+    fun moreThanBudgetInWindowFreesTokenAtTheBudgethOldest() {
+        // 6 scans inside the 120 s window (e.g. after an unthrottled run), then throttling
+        // is detected. A token frees when the count drops below budget=4 — i.e. when the
+        // (size-budget)=2nd-oldest ages out, NOT when the very first one does.
+        val scheduler = ScanScheduler(budget = 4, windowMs = 120_000, throttledIntervalMs = 30_000)
+        listOf(0L, 10_000, 20_000, 30_000, 40_000, 50_000).forEach { scheduler.recordScan(it) }
+
+        // At t=60_000: 6 in window. Token frees when scansMs[6-4]=20_000 ages out → 140_000.
+        // Old buggy code used first()=0 → 120_000 (says free at t=60_000, under-waits).
+        // Interval: last(50_000)+30_000-60_000 = 20_000. max(20_000, 140_000-60_000=80_000) = 80_000.
+        assertEquals(80_000L, scheduler.nextScanDelayMs(nowMs = 60_000, throttled = true))
+    }
 }

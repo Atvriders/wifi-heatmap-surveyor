@@ -14,7 +14,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -24,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atvriders.wifiheatmap.core.engine.LiveStats
 import com.atvriders.wifiheatmap.core.heatmap.ColorScale
+import com.atvriders.wifiheatmap.core.wifi.SignalFormat
 
 /** Amber used for the paused indicator. */
 private val PausedAmber = Color(0xFFFFB300)
@@ -39,6 +43,7 @@ fun StatsBar(
     stats: LiveStats,
     scale: ColorScale,
     totalSampleCount: Int,
+    signalPercent: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val rssi = stats.currentRssiDbm
@@ -58,6 +63,18 @@ fun StatsBar(
         }
     }
 
+    // Data-age: a 1 s ticker recomposes the "Xs ago" staleness label. nowMs starts at 0
+    // and is guarded until the first tick so we never render a bogus age.
+    var nowMs by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            nowMs = android.os.SystemClock.elapsedRealtime()
+            kotlinx.coroutines.delay(1000)
+        }
+    }
+    val lastFresh = stats.lastFreshAtMs
+    val ageSec = if (lastFresh != null && nowMs != 0L) (nowMs - lastFresh) / 1000 else null
+
     Surface(modifier = modifier, color = MaterialTheme.colorScheme.surfaceVariant, tonalElevation = 3.dp) {
         Row(
             modifier = Modifier
@@ -66,12 +83,21 @@ fun StatsBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = if (rssi != null) "$rssi dBm" else "--",
+                text = if (rssi != null) SignalFormat.format(rssi, signalPercent) else "--",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = rssiColor,
                 modifier = Modifier.alpha(flash.value),
             )
+            // Staleness hint: only once the reading is >= 2 s old (fresh readings show nothing).
+            if (ageSec != null && ageSec >= 2) {
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "${ageSec}s ago",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Surface(

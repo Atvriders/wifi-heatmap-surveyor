@@ -115,7 +115,9 @@ class ScanThrottleDetector(
      */
     private fun throttledEtaMs(nowMs: Long): Long =
         if (acceptedRequestsMs.size >= budget) {
-            acceptedRequestsMs.first() + windowMs
+            // The (size-budget)th oldest request is the one whose expiry frees a token;
+            // when more than `budget` requests are in the window, first() ages out too early.
+            acceptedRequestsMs.elementAt(acceptedRequestsMs.size - budget) + windowMs
         } else {
             nowMs + FALLBACK_BACKOFF_MS
         }

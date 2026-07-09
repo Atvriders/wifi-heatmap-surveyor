@@ -26,8 +26,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 class GpsPositionSource(context: Context) : PositionSource {
 
     private val appContext: Context = context.applicationContext
-    private val locationManager: LocationManager =
-        appContext.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    private val locationManager: LocationManager? =
+        appContext.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
 
     private val _fixes = MutableSharedFlow<PositionFix>(
         extraBufferCapacity = 16,
@@ -50,14 +50,15 @@ class GpsPositionSource(context: Context) : PositionSource {
 
     override fun start() {
         if (started) return // idempotent
+        val lm = locationManager ?: return // no location service on this device; emit nothing
         started = true
         val request = LocationRequestCompat.Builder(1000L)
             .setQuality(LocationRequestCompat.QUALITY_HIGH_ACCURACY)
             .build()
         try {
             LocationManagerCompat.requestLocationUpdates(
-                locationManager,
-                pickProvider(),
+                lm,
+                pickProvider(lm),
                 request,
                 ContextCompat.getMainExecutor(appContext),
                 listener,
@@ -72,16 +73,20 @@ class GpsPositionSource(context: Context) : PositionSource {
     override fun stop() {
         if (!started) return
         started = false
+        val lm = locationManager ?: return
         try {
-            LocationManagerCompat.removeUpdates(locationManager, listener)
+            LocationManagerCompat.removeUpdates(lm, listener)
+        } catch (_: SecurityException) {
+            // Location permission revoked mid-session; the explicit catch also lets lint
+            // recognize the MissingPermission case as handled (fails lintRelease otherwise).
         } catch (_: RuntimeException) {
             // Never registered (start failed) or manager already torn down; nothing to release.
         }
     }
 
-    private fun pickProvider(): String =
+    private fun pickProvider(lm: LocationManager): String =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-            locationManager.allProviders.contains(LocationManager.FUSED_PROVIDER)
+            lm.allProviders.contains(LocationManager.FUSED_PROVIDER)
         ) {
             LocationManager.FUSED_PROVIDER
         } else {

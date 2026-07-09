@@ -54,6 +54,12 @@ data class LiveStats(
     val elapsedMs: Long = 0,
     val waitingForFix: Boolean = false,
     val paused: Boolean = false,
+    /**
+     * Clock time (same timebase as [SignalSnapshot.timestampMs]) of the most recent FRESH
+     * reading, or null before any. The HUD turns this into a "Xs ago" data-age indicator so
+     * a stale scan-throttled reading is never shown as if it were current.
+     */
+    val lastFreshAtMs: Long? = null,
 )
 
 /**
@@ -333,6 +339,7 @@ class SurveyEngine(
             fresh = s.fresh,
             apCount = seenBssids.size,
             elapsedMs = clock() - startedAtMs,
+            lastFreshAtMs = if (s.fresh) s.timestampMs else _liveStats.value.lastFreshAtMs,
         )
 
         when (mode) {

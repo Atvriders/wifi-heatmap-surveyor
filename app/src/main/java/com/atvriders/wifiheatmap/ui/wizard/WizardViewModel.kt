@@ -168,7 +168,11 @@ class WizardViewModel(private val container: AppContainer) : ViewModel() {
 
                 s.planChoice == PlanChoice.IMPORT && s.importedPlan != null -> {
                     val imported = s.importedPlan
-                    val mpp = if (s.calibrationSkipped) null else s.metersPerPixel
+                    // The survey is calibrated IFF a valid scale is computable from the two
+                    // pins + real distance (ScaleCalibration.metersPerPixel returns null for
+                    // degenerate/absent input). The sticky calibrationSkipped flag drives UI
+                    // only and must NOT drop a computable calibration.
+                    val mpp = s.metersPerPixel
                     FloorPlanEntity(
                         imagePath = imported.path,
                         widthPx = imported.widthPx,

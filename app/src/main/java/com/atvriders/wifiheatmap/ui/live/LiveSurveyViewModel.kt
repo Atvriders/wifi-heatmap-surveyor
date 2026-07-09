@@ -135,6 +135,16 @@ class LiveSurveyViewModel(
     /** True once the engine is built and started. */
     val ready: StateFlow<Boolean> = _ready.asStateFlow()
 
+    private val _loadError = MutableStateFlow(false)
+
+    /** True if the survey row could not be loaded (missing/deleted); terminal state. */
+    val loadError: StateFlow<Boolean> = _loadError.asStateFlow()
+
+    private val _finished = MutableStateFlow(false)
+
+    /** True once [finishAsync] has completed the durable finish (engine stop + drain + status). */
+    val finished: StateFlow<Boolean> = _finished.asStateFlow()
+
     private val _snackbar = MutableSharedFlow<String>(extraBufferCapacity = 8)
 
     /** One-shot user-facing messages (undo confirmations etc.). */
@@ -171,7 +181,10 @@ class LiveSurveyViewModel(
 
     init {
         viewModelScope.launch {
-            val s = repository.surveyDao.getSurvey(surveyId) ?: return@launch
+            val s = repository.surveyDao.getSurvey(surveyId) ?: run {
+                _loadError.value = true
+                return@launch
+            }
             val plan = s.floorPlanId?.let { repository.surveyDao.getFloorPlan(it) }
             // Publish the plan BEFORE the survey so the screen never sees a
             // loaded survey with a missing plan (wrong canvas fit).
@@ -339,6 +352,18 @@ class LiveSurveyViewModel(
             it.drainSink()
         }
         repository.surveyDao.setStatus(surveyId, "COMPLETE")
+    }
+
+    /**
+     * Durable wrapper around [finish]: runs on viewModelScope so it survives config
+     * changes (rotation). The drain completes even if the screen is recreated; when it
+     * finishes, [finished] flips true so the screen can navigate away exactly once.
+     */
+    fun finishAsync() {
+        viewModelScope.launch {
+            finish()
+            _finished.value = true
+        }
     }
 
     override fun onCleared() {

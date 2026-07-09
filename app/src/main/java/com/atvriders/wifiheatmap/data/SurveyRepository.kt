@@ -1,6 +1,8 @@
 package com.atvriders.wifiheatmap.data
 
 import androidx.room.withTransaction
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.atvriders.wifiheatmap.core.engine.SampleSink
 import com.atvriders.wifiheatmap.core.model.PositionedSample
 import com.atvriders.wifiheatmap.data.db.AppDatabase
@@ -49,6 +51,10 @@ class SurveyRepository(private val db: AppDatabase) : SampleSink {
     }
 
     /** Full survey rehydration for analysis/resume: all samples with their readings. */
-    suspend fun loadSamples(surveyId: Long): List<PositionedSample> =
-        regroupJoinedRows(db.sampleDao().joinedReadings(surveyId))
+    suspend fun loadSamples(surveyId: Long): List<PositionedSample> {
+        // Room runs the query off-main; the CPU-bound regroup (thousands of objects) must
+        // not run on the caller's dispatcher (often main), so move it to Default.
+        val rows = db.sampleDao().joinedReadings(surveyId)
+        return withContext(Dispatchers.Default) { regroupJoinedRows(rows) }
+    }
 }

@@ -12,6 +12,11 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- Declared so Play filters truly incompatible devices, but required="false" keeps
+         the app installable: it degrades gracefully when Wi-Fi/GPS are absent. -->
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
     <application
         android:name=".WifiHeatmapApp"
         android:allowBackup="true"
@@ -25,7 +30,6 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.WifiHeatmap">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

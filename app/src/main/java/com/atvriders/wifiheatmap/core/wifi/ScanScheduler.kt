@@ -64,8 +64,11 @@ class ScanScheduler(
             return (last + unthrottledIntervalMs - nowMs).coerceAtLeast(0L)
         }
         val intervalDelay = (last + throttledIntervalMs - nowMs).coerceAtLeast(0L)
+        // A token frees when enough of the oldest scans age out to bring the in-window
+        // count below budget: that is the (size-budget)th oldest, not necessarily the
+        // first (more than `budget` scans can sit in the window after an unthrottled run).
         val tokenDelay = if (scansMs.size >= budget) {
-            (scansMs.first() + windowMs - nowMs).coerceAtLeast(0L)
+            (scansMs.elementAt(scansMs.size - budget) + windowMs - nowMs).coerceAtLeast(0L)
         } else {
             0L
         }

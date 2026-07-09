@@ -49,10 +49,10 @@ class ConnectedRssiPoller(
 ) : SignalSource {
 
     private val appContext: Context = context.applicationContext
-    private val wifiManager: WifiManager =
-        appContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-    private val connectivityManager: ConnectivityManager =
-        appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    private val wifiManager: WifiManager? =
+        appContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+    private val connectivityManager: ConnectivityManager? =
+        appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
 
     private val _snapshots = MutableSharedFlow<SignalSnapshot>(
         extraBufferCapacity = 16,
@@ -77,6 +77,7 @@ class ConnectedRssiPoller(
 
     override fun start() {
         if (scope != null) return // idempotent
+        if (wifiManager == null) return // no Wi-Fi service on this device; emit nothing
         sampler = RssiSampler()
         registerNetworkCallbackIfSupported()
         val pollScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -94,7 +95,7 @@ class ConnectedRssiPoller(
         scope = null
         networkCallback?.let { callback ->
             try {
-                connectivityManager.unregisterNetworkCallback(callback)
+                connectivityManager?.unregisterNetworkCallback(callback)
             } catch (_: IllegalArgumentException) {
                 // Already unregistered (or registration never completed); nothing to release.
             } catch (_: SecurityException) {
@@ -110,9 +111,10 @@ class ConnectedRssiPoller(
     // through API 36; the replacement callback only fires on capability changes, not per poll.
     @Suppress("DEPRECATION")
     private fun pollOnce() {
+        val wifi = wifiManager ?: return
         val now = SystemClock.elapsedRealtime()
         val pollInfo = try {
-            wifiManager.connectionInfo
+            wifi.connectionInfo
         } catch (_: SecurityException) {
             null // permission revoked mid-run; skip this poll
         } ?: return
@@ -152,6 +154,7 @@ class ConnectedRssiPoller(
 
     private fun registerNetworkCallbackIfSupported() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        val cm = connectivityManager ?: return
         val callback = object : ConnectivityManager.NetworkCallback(
             FLAG_INCLUDE_LOCATION_INFO
         ) {
@@ -167,7 +170,7 @@ class ConnectedRssiPoller(
             }
         }
         try {
-            connectivityManager.registerNetworkCallback(
+            cm.registerNetworkCallback(
                 NetworkRequest.Builder()
                     .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                     .build(),

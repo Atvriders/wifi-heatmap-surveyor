@@ -18,6 +18,7 @@ import com.atvriders.wifiheatmap.core.model.HeatFilter
 import com.atvriders.wifiheatmap.core.model.PositionedSample
 import com.atvriders.wifiheatmap.core.wifi.SignalStats
 import com.atvriders.wifiheatmap.data.DistanceUnit
+import com.atvriders.wifiheatmap.data.SignalUnit
 import com.atvriders.wifiheatmap.data.db.BssidRow
 import com.atvriders.wifiheatmap.data.db.FloorPlanEntity
 import com.atvriders.wifiheatmap.data.db.SsidSummaryRow
@@ -95,6 +96,9 @@ class AnalysisViewModel(
 
     val distanceUnit = MutableStateFlow(DistanceUnit.METERS)
 
+    /** Whether RSSI readouts display as a percentage (vs dBm); from settings on load. */
+    val signalPercent = MutableStateFlow(false)
+
     /** Color scale per the colorblind setting; fixed once settings load. */
     val colorScale = MutableStateFlow(ColorScale.Default)
 
@@ -168,6 +172,7 @@ class AnalysisViewModel(
 
             thresholdDbm.value = settings.thresholdDbm
             distanceUnit.value = settings.distanceUnit
+            signalPercent.value = settings.signalUnit == SignalUnit.PERCENT
             colorScale.value =
                 if (settings.colorblindScale) ColorScale.ColorblindSafe else ColorScale.Default
             isGps = survey?.positioningMode == "GPS"

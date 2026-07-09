@@ -230,17 +230,12 @@ class HeatmapController(
     }
 
     private fun removeInternal(segmentIndex: Int): Boolean {
-        val g = grid ?: return false
-        var removedAny = false
-        val iterator = contributions.iterator()
-        while (iterator.hasNext()) {
-            val c = iterator.next()
-            if (c.segmentIndex == segmentIndex) {
-                g.removePoint(c.x, c.y, c.value)
-                iterator.remove()
-                removedAny = true
-            }
-        }
+        if (grid == null) return false
+        // Rebuild from the remaining contributions rather than subtracting each removed
+        // point incrementally: undo is rare, so an O(N) rebuild is cheap, and it avoids
+        // the floating-point residue that repeated add/removePoint cycles would accumulate.
+        val removedAny = contributions.removeAll { it.segmentIndex == segmentIndex }
+        if (removedAny) rebuildGrid()
         return removedAny
     }
 

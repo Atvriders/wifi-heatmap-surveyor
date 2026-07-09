@@ -40,7 +40,11 @@ class FloorPlanImageStore(private val context: Context) {
         }
     }
 
-    fun loadBitmap(path: String): Bitmap? = BitmapFactory.decodeFile(path)
+    fun loadBitmap(path: String): Bitmap? =
+        BitmapFactory.decodeFile(
+            path,
+            BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.RGB_565 },
+        )
 
     fun delete(path: String) {
         runCatching { File(path).takeIf { it.parentFile == dir || it.startsWith(dir) }?.delete() }

@@ -112,4 +112,22 @@ class ScanThrottleDetectorTest {
         assertEquals(ThrottleState.Unthrottled, detector.state)
         assertEquals(0L, detector.etaMs(nowMs = 132_000))
     }
+
+    @Test
+    fun etaUsesBudgethOldestWhenMoreThanBudgetAcceptedInWindow() {
+        // 6 accepted requests within the 120 s window, then a rejected 7th. The ETA must be
+        // when the count drops below budget=4 — the (size-budget)=2nd-oldest ages out — not
+        // when the very first (which would under-report the wait).
+        val detector = ScanThrottleDetector() // windowMs = 120_000, budget = 4
+        listOf(0L, 10_000, 20_000, 30_000, 40_000, 50_000).forEach {
+            detector.onScanRequested(nowMs = it, accepted = true)
+            detector.onResults(nowMs = it + 500, resultsUpdated = true, newestResultAgeMs = 100)
+        }
+        detector.onScanRequested(nowMs = 60_000, accepted = false)
+
+        val state = detector.state
+        assertTrue(state is ThrottleState.Throttled)
+        // acceptedRequestsMs[6-4] = 20_000; eta = 20_000 + 120_000 = 140_000.
+        assertEquals(140_000L, (state as ThrottleState.Throttled).nextScanEtaMs)
+    }
 }

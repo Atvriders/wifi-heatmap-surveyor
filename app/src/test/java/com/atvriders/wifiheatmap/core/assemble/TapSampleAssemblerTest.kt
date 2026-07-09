@@ -248,4 +248,26 @@ class TapSampleAssemblerTest {
         assertEquals(100.0, samples[0].x, 0.0) // t=1500 of [1000..2000] → halfway 50→150
         assertEquals(0.0, samples[0].y, 0.0)
     }
+
+    @Test
+    fun undoOfReanchorThenFinalizedSegmentStillFinalizesNextSegment() {
+        // Regression: pause/resume/re-anchor then two undos must NOT leave the assembler
+        // stuck awaiting a re-anchor, which would silently discard the next segment.
+        val a = TapSampleAssembler()
+        a.onTap(Vec2(0.0, 0.0), 0)          // first tap: anchor A
+        a.onSnapshot(snapshot(50))
+        a.onTap(Vec2(100.0, 0.0), 100)      // finalizes segment 0, anchor B
+        a.pause()
+        a.resume()
+        a.onTap(Vec2(200.0, 0.0), 200)      // re-anchor to C (no segment)
+
+        a.undoLastTap()                     // undo C: back to awaiting re-anchor at B
+        a.undoLastTap()                     // undo B (finalized seg 0): back to anchor A
+
+        // The next segment must finalize, not be swallowed by a stuck re-anchor state.
+        a.onSnapshot(snapshot(250))
+        val samples = a.onTap(Vec2(300.0, 0.0), 300)
+        assertEquals(1, samples.size)
+        assertEquals(0, samples[0].segmentIndex)
+    }
 }

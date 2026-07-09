@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Auto Backup rules (API <= 30, android:fullBackupContent). Surveys, floor plans and
-  settings contain no credentials, so everything is included in backups — losing a
-  40-minute walk survey to a phone swap would be the real data loss.
+  Auto Backup rules (API <= 30, android:fullBackupContent). The app promises nothing
+  leaves the device (no Internet permission), so the survey database (BSSIDs + GPS
+  coordinates = sensitive location data) and the settings datastore are excluded from
+  cloud backup. Floor plans and other files still back up.
 -->
-<full-backup-content />
+<full-backup-content>
+    <exclude domain="database" path="wifiheatmap.db" />
+    <exclude domain="database" path="wifiheatmap.db-shm" />
+    <exclude domain="database" path="wifiheatmap.db-wal" />
+    <exclude domain="file" path="datastore/settings.preferences_pb" />
+</full-backup-content>

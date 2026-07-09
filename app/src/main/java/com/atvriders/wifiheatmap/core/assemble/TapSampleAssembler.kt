@@ -170,6 +170,10 @@ class TapSampleAssembler(
         anchorTimeMs = previous.timeMs
         return if (removed.finalizedSegmentIndex != null) {
             segmentCounter--
+            // Reverting onto a tap that finalized a segment restores a live,
+            // segment-producing anchor; the next tap must finalize, not re-anchor.
+            // (The buffer was already cleared above, so there is no pause-gap smear.)
+            awaitingReanchor = false
             UndoResult(removedSegmentIndex = segmentCounter, restoredAnchor = previous.point)
         } else {
             awaitingReanchor = true

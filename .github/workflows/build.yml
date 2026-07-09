@@ -79,9 +79,15 @@ jobs:
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
             echo "present=true" >> "$GITHUB_OUTPUT"
+          elif [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            # A published release MUST carry the stable upload key; refuse to ship a
+            # tag build signed with the ephemeral per-runner debug key (unstable
+            # signature => users cannot upgrade in place without uninstalling).
+            echo "::error::Tag build with no KEYSTORE_BASE64 secret — refusing to publish a debug-signed release."
+            exit 1
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "No KEYSTORE_BASE64 secret set — release APK will be debug-signed (still installable)."
+            echo "No KEYSTORE_BASE64 secret set — non-tag build will be debug-signed (still installable)."
           fi
 
       - name: Run unit tests

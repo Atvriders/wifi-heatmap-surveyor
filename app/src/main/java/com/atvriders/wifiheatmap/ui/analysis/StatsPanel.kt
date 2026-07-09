@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.atvriders.wifiheatmap.core.heatmap.ColorScale
 import com.atvriders.wifiheatmap.core.heatmap.Coverage
+import com.atvriders.wifiheatmap.core.wifi.SignalFormat
 import com.atvriders.wifiheatmap.core.wifi.SignalStats
 import com.atvriders.wifiheatmap.data.DistanceUnit
 import com.atvriders.wifiheatmap.ui.common.LegendBar
@@ -35,6 +36,7 @@ fun StatsPanel(
     sampleCount: Int,
     apCount: Int,
     summary: SignalStats.Summary?,
+    signalPercent: Boolean = false,
     coverage: Coverage?,
     thresholdDbm: Int,
     distanceUnit: DistanceUnit,
@@ -75,17 +77,17 @@ fun StatsPanel(
             Row(modifier = Modifier.fillMaxWidth()) {
                 StatCell(
                     label = "Min",
-                    value = summary?.let { "${it.min} dBm" } ?: "—",
+                    value = summary?.let { SignalFormat.format(it.min, signalPercent) } ?: "—",
                     modifier = Modifier.weight(1f),
                 )
                 StatCell(
                     label = "Median",
-                    value = summary?.let { "${it.median} dBm" } ?: "—",
+                    value = summary?.let { SignalFormat.format(it.median, signalPercent) } ?: "—",
                     modifier = Modifier.weight(1f),
                 )
                 StatCell(
                     label = "Max",
-                    value = summary?.let { "${it.max} dBm" } ?: "—",
+                    value = summary?.let { SignalFormat.format(it.max, signalPercent) } ?: "—",
                     modifier = Modifier.weight(1f),
                 )
             }

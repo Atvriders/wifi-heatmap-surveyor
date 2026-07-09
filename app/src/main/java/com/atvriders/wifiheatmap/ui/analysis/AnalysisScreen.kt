@@ -100,6 +100,7 @@ fun AnalysisScreen(
     val display by vm.display.collectAsState()
     val summaries by vm.ssidSummaries.collectAsState()
     val signalSummary by vm.signalSummary.collectAsState()
+    val signalPercent by vm.signalPercent.collectAsState()
     val distanceUnit by vm.distanceUnit.collectAsState()
     val colorScale by vm.colorScale.collectAsState()
     val exportEvent by vm.exportEvent.collectAsState()
@@ -336,14 +337,26 @@ fun AnalysisScreen(
                 }
 
                 // (e) Stats.
-                val apCount = filter.ssid
-                    ?.let { s -> summaries.firstOrNull { it.ssid == s }?.bssidCount ?: 0 }
-                    ?: summaries.sumOf { it.bssidCount }
+                // "APs heard": distinct BSSIDs among loaded readings that match the FULL
+                // active filter (SSID + band + BSSID), so it agrees with the RSSI stats
+                // beside it rather than counting SSID-only summaries.
+                val apCount = remember(samples, filter) {
+                    samples.flatMap { it.readings }
+                        .filter {
+                            (filter.ssid == null || it.ssid == filter.ssid) &&
+                                (filter.band == null || it.band == filter.band) &&
+                                (filter.bssid == null || it.bssid == filter.bssid)
+                        }
+                        .map { it.bssid }
+                        .distinct()
+                        .size
+                }
                 StatsPanel(
                     scale = colorScale,
                     sampleCount = samples.size,
                     apCount = apCount,
                     summary = signalSummary,
+                    signalPercent = signalPercent,
                     coverage = display.coverage,
                     thresholdDbm = threshold,
                     distanceUnit = distanceUnit,

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -39,7 +40,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,10 +51,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atvriders.wifiheatmap.core.geo.Vec2
 import com.atvriders.wifiheatmap.core.heatmap.ColorScale
+import com.atvriders.wifiheatmap.data.SignalUnit
 import com.atvriders.wifiheatmap.di.AppContainer
 import com.atvriders.wifiheatmap.ui.common.SurveyPreflightGate
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /** GPS start extent in plan units (meters): -50..50 on both axes. */
 private const val GPS_START_EXTENT = 100.0
@@ -106,6 +106,32 @@ private fun LiveSurveyContent(
     val currentAnchor by vm.currentAnchor.collectAsState()
     val heatFilter by vm.heatFilter.collectAsState()
     val ready by vm.ready.collectAsState()
+    val loadError by vm.loadError.collectAsState()
+    val finished by vm.finished.collectAsState()
+
+    // Durable finish: viewModelScope drives the stop+drain, surviving rotation; when it
+    // completes we navigate exactly once (LaunchedEffect fires on the single false->true).
+    LaunchedEffect(finished) {
+        if (finished) onFinish(surveyId)
+    }
+
+    if (loadError) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                "Survey not found",
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = onBack) { Text("Back") }
+        }
+        return
+    }
 
     val survey = surveyState
     val settings = settingsState
@@ -129,7 +155,6 @@ private fun LiveSurveyContent(
         null
     }
 
-    val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(Unit) {
         vm.snackbarMessages.collect { snackbarHostState.showSnackbar(it) }
@@ -274,6 +299,7 @@ private fun LiveSurveyContent(
                 stats = stats,
                 scale = colorScale,
                 totalSampleCount = totalSampleCount,
+                signalPercent = settings.signalUnit == SignalUnit.PERCENT,
             )
 
             Row(
@@ -340,24 +366,29 @@ private fun LiveSurveyContent(
     }
 
     if (showFinishDialog) {
+        val isEmpty = totalSampleCount == 0
         AlertDialog(
             onDismissRequest = { showFinishDialog = false },
-            title = { Text("Finish survey?") },
+            title = { Text(if (isEmpty) "Finish empty survey?" else "Finish survey?") },
             text = {
-                Column {
-                    Text("Duration: ${formatElapsedMmSs(stats.elapsedMs)}")
-                    if (!isGps) Text("Points: ${tapAnchors.size}")
-                    Text("Samples: $totalSampleCount")
+                if (isEmpty) {
+                    Text(
+                        "You haven't recorded any samples yet — the survey will be saved " +
+                            "with nothing to show."
+                    )
+                } else {
+                    Column {
+                        Text("Duration: ${formatElapsedMmSs(stats.elapsedMs)}")
+                        if (!isGps) Text("Points: ${tapAnchors.size}")
+                        Text("Samples: $totalSampleCount")
+                    }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
                     showFinishDialog = false
                     finishing = true
-                    scope.launch {
-                        vm.finish()
-                        onFinish(surveyId)
-                    }
+                    vm.finishAsync()
                 }) { Text("Finish") }
             },
             dismissButton = {

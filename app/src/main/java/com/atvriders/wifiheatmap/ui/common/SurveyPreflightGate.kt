@@ -95,7 +95,10 @@ fun SurveyPreflightGate(content: @Composable () -> Unit) {
             },
             onCheckAgain = { deviceState = readDeviceState(context) },
             tertiaryLabel = "Open app settings",
-            onTertiary = { context.startActivity(appDetailsIntent(context)) },
+            onTertiary = {
+                runCatching { context.startActivity(appDetailsIntent(context)) }
+                    .onFailure { runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS)) } }
+            },
         )
 
         OnboardingStep.NEED_PRECISE_LOCATION -> FixItScreen(
@@ -105,7 +108,10 @@ fun SurveyPreflightGate(content: @Composable () -> Unit) {
                 "scan results and the survey would record nothing. Turn on \"Use " +
                 "precise location\" for this app in system settings.",
             primaryLabel = "Open app settings",
-            onPrimary = { context.startActivity(appDetailsIntent(context)) },
+            onPrimary = {
+                runCatching { context.startActivity(appDetailsIntent(context)) }
+                    .onFailure { runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS)) } }
+            },
             onCheckAgain = { deviceState = readDeviceState(context) },
         )
 
@@ -117,7 +123,9 @@ fun SurveyPreflightGate(content: @Composable () -> Unit) {
                 "so the survey would see no networks at all.",
             primaryLabel = "Open location settings",
             onPrimary = {
-                context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                runCatching {
+                    context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                }.onFailure { runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS)) } }
             },
             onCheckAgain = { deviceState = readDeviceState(context) },
         )
@@ -135,7 +143,7 @@ fun SurveyPreflightGate(content: @Composable () -> Unit) {
                     Intent(Settings.ACTION_WIFI_SETTINGS)
                 }
                 runCatching { context.startActivity(intent) }
-                    .onFailure { context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }
+                    .onFailure { runCatching { context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) } }
             },
             onCheckAgain = { deviceState = readDeviceState(context) },
         )

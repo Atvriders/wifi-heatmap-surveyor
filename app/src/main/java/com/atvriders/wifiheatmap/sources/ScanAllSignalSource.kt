@@ -45,8 +45,8 @@ import kotlinx.coroutines.launch
 class ScanAllSignalSource(context: Context) : SignalSource {
 
     private val appContext: Context = context.applicationContext
-    private val wifiManager: WifiManager =
-        appContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+    private val wifiManager: WifiManager? =
+        appContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
 
     private val detector = ScanThrottleDetector()
     private val scheduler = ScanScheduler()
@@ -74,6 +74,7 @@ class ScanAllSignalSource(context: Context) : SignalSource {
 
     override fun start() {
         if (scope != null) return // idempotent
+        if (wifiManager == null) return // no Wi-Fi service on this device; emit nothing
         ContextCompat.registerReceiver(
             appContext,
             receiver,
@@ -116,7 +117,7 @@ class ScanAllSignalSource(context: Context) : SignalSource {
     // way for a foreground app to request an on-demand full scan through API 36.
     @Suppress("DEPRECATION")
     private fun requestScan(): Boolean = try {
-        wifiManager.startScan()
+        wifiManager?.startScan() ?: false
     } catch (_: SecurityException) {
         false // permission revoked mid-run; treat as a rejected request
     }
@@ -126,7 +127,7 @@ class ScanAllSignalSource(context: Context) : SignalSource {
         val resultsUpdated =
             intent?.getBooleanExtra(WifiManager.EXTRA_RESULTS_UPDATED, true) ?: true
         val results: List<ScanResult> = try {
-            wifiManager.scanResults ?: emptyList()
+            wifiManager?.scanResults ?: emptyList()
         } catch (_: SecurityException) {
             emptyList()
         }
@@ -174,7 +175,7 @@ class ScanAllSignalSource(context: Context) : SignalSource {
     // synchronous way to learn the currently-associated BSSID for tagging scan rows.
     @Suppress("DEPRECATION")
     private fun connectedBssidOrNull(): String? = try {
-        wifiManager.connectionInfo?.bssid?.lowercase()?.takeIf { it != REDACTED_BSSID }
+        wifiManager?.connectionInfo?.bssid?.lowercase()?.takeIf { it != REDACTED_BSSID }
     } catch (_: SecurityException) {
         null // best-effort tag only
     }
