@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Data extraction rules (API 31+, android:dataExtractionRules). Surveys, floor plans
+  and settings contain no credentials, so cloud backup and device-to-device transfer
+  both include everything by default.
+-->
+<data-extraction-rules>
+    <cloud-backup />
+    <device-transfer />
+</data-extraction-rules>

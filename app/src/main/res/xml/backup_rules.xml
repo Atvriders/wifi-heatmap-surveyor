@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Auto Backup rules (API <= 30, android:fullBackupContent). Surveys, floor plans and
+  settings contain no credentials, so everything is included in backups — losing a
+  40-minute walk survey to a phone swap would be the real data loss.
+-->
+<full-backup-content />

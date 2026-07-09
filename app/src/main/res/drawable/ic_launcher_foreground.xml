@@ -1,0 +1,29 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Wi-Fi arcs colored by signal-strength scale (green -> yellow -> orange)
+         radiating above a survey point: the app's heatmap identity in one glyph. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,74 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <path
+        android:strokeColor="#4CAF50"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M42,62 a17,17 0 0,1 24,0" />
+    <path
+        android:strokeColor="#FFC107"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M33,53 a30,30 0 0,1 42,0" />
+    <path
+        android:strokeColor="#FF7043"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M24,44 a42,42 0 0,1 60,0" />
+</vector>
