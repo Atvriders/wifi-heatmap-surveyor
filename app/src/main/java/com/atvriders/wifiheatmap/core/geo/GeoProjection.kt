@@ -48,5 +48,17 @@ class GeoProjection(val originLat: Double, val originLon: Double) {
 
         /** Approximate meters per degree of longitude at the equator (WGS-84). */
         const val METERS_PER_DEGREE_LON_EQUATOR: Double = 111320.0
+
+        /**
+         * Recovers the survey origin (latitude, longitude) from a stored sample that carries
+         * both its raw fix ([lat], [lon]) and its projected local-meter position ([x], [y]).
+         * Exact inverse of the projection arithmetic; used to re-seed the projection when a
+         * GPS survey is resumed in a later session, so new samples stay in the original frame.
+         */
+        fun originFromSample(lat: Double, lon: Double, x: Double, y: Double): Pair<Double, Double> {
+            val originLat = lat + y / METERS_PER_DEGREE_LAT
+            val originLon = lon - x / (cos(Math.toRadians(originLat)) * METERS_PER_DEGREE_LON_EQUATOR)
+            return originLat to originLon
+        }
     }
 }

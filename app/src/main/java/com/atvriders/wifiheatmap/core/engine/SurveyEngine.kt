@@ -122,6 +122,10 @@ class SurveyEngine(
     private val filterForStats: HeatFilter = HeatFilter(),
     gpsFlushEvery: Int = 10,
     gpsFlushMs: Long = 5_000,
+    /** TAP mode: first segment index for this session (resume passes max stored + 1). */
+    firstSegmentIndex: Int = 0,
+    /** GPS mode: pre-seeded projection origin for resumed surveys (see [GpsSampleAssembler]). */
+    gpsOriginLatLon: Pair<Double, Double>? = null,
 ) {
     init {
         require(mode != PositioningMode.GPS || positionSource != null) {
@@ -135,9 +139,13 @@ class SurveyEngine(
     private val flushMs: Long = gpsFlushMs
 
     private val tapAssembler: TapSampleAssembler? =
-        if (mode == PositioningMode.TAP) TapSampleAssembler() else null
+        if (mode == PositioningMode.TAP) TapSampleAssembler(firstSegmentIndex) else null
     private val gpsAssembler: GpsSampleAssembler? =
-        if (mode == PositioningMode.GPS) GpsSampleAssembler() else null
+        if (mode == PositioningMode.GPS) {
+            GpsSampleAssembler(presetOriginLatLon = gpsOriginLatLon)
+        } else {
+            null
+        }
 
     private val _samples = MutableStateFlow<List<PositionedSample>>(emptyList())
 
@@ -232,6 +240,15 @@ class SurveyEngine(
         signalSource.stop()
         if (mode == PositioningMode.GPS) positionSource!!.stop()
         flushPendingGps()
+    }
+
+    /**
+     * Suspends until every sink write enqueued so far (including [stop]'s final flush) has
+     * completed. Callers that navigate away or cancel [scope] after stopping MUST await this
+     * first, or the tail batch can be cancelled mid-transaction and silently lost.
+     */
+    suspend fun drainSink() {
+        sinkChain?.join()
     }
 
     /**

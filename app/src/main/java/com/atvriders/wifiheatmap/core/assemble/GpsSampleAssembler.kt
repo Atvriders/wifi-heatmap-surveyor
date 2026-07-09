@@ -26,8 +26,15 @@ import com.atvriders.wifiheatmap.core.model.SignalSnapshot
 class GpsSampleAssembler(
     val accuracyGateM: Float = 15f,
     val fixStaleMs: Long = 5_000,
+    /**
+     * Pre-seeded origin (latitude, longitude) for resumed surveys: when set, all fixes
+     * project into this frame instead of anchoring a new origin at the first accepted fix,
+     * keeping this session's samples aligned with previously stored ones.
+     */
+    presetOriginLatLon: Pair<Double, Double>? = null,
 ) {
-    private var projection: GeoProjection? = null
+    private var projection: GeoProjection? =
+        presetOriginLatLon?.let { GeoProjection(it.first, it.second) }
     private var lastAcceptedFix: PositionFix? = null
     private var waiting: Boolean = true
 

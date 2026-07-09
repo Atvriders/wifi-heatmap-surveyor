@@ -1,5 +1,6 @@
 package com.atvriders.wifiheatmap.data
 
+import androidx.room.withTransaction
 import com.atvriders.wifiheatmap.core.engine.SampleSink
 import com.atvriders.wifiheatmap.core.model.PositionedSample
 import com.atvriders.wifiheatmap.data.db.AppDatabase
@@ -33,9 +34,9 @@ class SurveyRepository(private val db: AppDatabase) : SampleSink {
         scanMode: String,
         floorPlan: FloorPlanEntity?,
         nowMs: Long,
-    ): Long {
+    ): Long = db.withTransaction {
         val planId = floorPlan?.let { db.surveyDao().insertFloorPlan(it) }
-        return db.surveyDao().insertSurvey(
+        db.surveyDao().insertSurvey(
             SurveyEntity(
                 name = name,
                 createdAtMs = nowMs,

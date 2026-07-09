@@ -39,6 +39,9 @@ interface SurveyDao {
     @Query("SELECT * FROM floor_plans WHERE id = :id")
     suspend fun getFloorPlan(id: Long): FloorPlanEntity?
 
+    @Query("DELETE FROM floor_plans WHERE id = :id")
+    suspend fun deleteFloorPlan(id: Long)
+
     @Query(
         """UPDATE floor_plans SET metersPerPixel = :metersPerPixel, calAx = :ax, calAy = :ay,
            calBx = :bx, calBy = :by, calDistanceM = :distanceM WHERE id = :id"""

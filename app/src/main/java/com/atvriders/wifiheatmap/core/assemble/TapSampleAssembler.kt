@@ -36,7 +36,14 @@ data class UndoResult(
  *
  * Not thread-safe: confine to a single thread/dispatcher.
  */
-class TapSampleAssembler {
+class TapSampleAssembler(
+    /**
+     * Index the first finalized segment receives. Resumed surveys pass
+     * (max stored segmentIndex + 1) so undo can never delete a previous
+     * session's rows, which are matched by (surveyId, segmentIndex).
+     */
+    firstSegmentIndex: Int = 0,
+) {
 
     /** One tap the surveyor made; [finalizedSegmentIndex] is null for taps that only anchored. */
     private data class Tap(
@@ -47,7 +54,7 @@ class TapSampleAssembler {
 
     private var anchor: Vec2? = null
     private var anchorTimeMs: Long = 0L
-    private var segmentCounter: Int = 0
+    private var segmentCounter: Int = firstSegmentIndex
     private var paused: Boolean = false
     private var awaitingReanchor: Boolean = false
     private val buffer = ArrayList<SignalSnapshot>()
